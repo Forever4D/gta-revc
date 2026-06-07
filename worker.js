@@ -118,6 +118,19 @@ async function handleRequest(request) {
     });
   }
 
+  // Index file for SW preload
+  if (path === '/vcsky-all-index.json') {
+    const resp = await fetch(`${RELEASE}/vcsky-all-index.json`, { redirect: 'follow' });
+    if (!resp.ok) return new Response('Not Found', { status: 404 });
+    return new Response(resp.body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': `public, max-age=${CACHE_TTL}`,
+      }
+    });
+  }
+
   // Core files
   if (path === '/index.data' || path === '/index.wasm') {
     let resp = await hotCache.match(request.url);
