@@ -169,17 +169,9 @@ function updateAllTranslations() {
 
 // Function to update game data files based on language
 function updateGameDataForLanguage(lang) {
-    var isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.') || location.hostname.startsWith('192.168.');
-    if (isLocal) {
-        // Local: use packed archive via vcbr proxy
-        data_content = "/vcbr/vc-sky-en-v6.data.br";
-        wasm_content = "/vcbr/vc-sky-en-v6.wasm.br";
-    } else {
-        // Hosted: use GitHub Releases
-        var releaseBase = "https://github.com/Forever4D/gta-revc/releases/download/v1.0";
-        data_content = releaseBase + "/index.data";
-        wasm_content = releaseBase + "/index.wasm";
-    }
+    // Always use same-origin paths — server/host handles the actual source
+    data_content = "/index.data";
+    wasm_content = "/index.wasm";
 }
 
 // Initialize data files based on current language
