@@ -612,7 +612,7 @@
 >
     <div id="splash-screen">
         <div class="title">Grand Theft Auto: Vice City</div>
-        <div class="subtitle" id="splash-status">Initializing...</div>
+        <div class="subtitle" id="splash-status">Click anywhere to start</div>
         <div class="bar"><div class="bar-fill" id="splash-bar"></div></div>
         <div class="credit">Compiled by Forever4D</div>
     </div>
@@ -783,11 +783,20 @@
     window.addEventListener('touchstart', forceEnableTouchControls, { once: true });
     </script>
     <script>
-    (function autoStart() {
-        if (typeof startGame !== 'function') return setTimeout(autoStart, 100);
+    // Wait for user click before starting game (browser autoplay policy requires user gesture for audio)
+    var _gameStarted = false;
+    function _startGameNow() {
+        if (_gameStarted) return;
+        _gameStarted = true;
         if (typeof haveOriginalGame !== 'undefined') haveOriginalGame = true;
+        // Update splash to show progress
+        var splashStatus = document.getElementById('splash-status');
+        if (splashStatus) splashStatus.textContent = 'Loading...';
         startGame(null);
-    })();
+    }
+    document.addEventListener('click', _startGameNow, { once: true });
+    document.addEventListener('keydown', _startGameNow, { once: true });
+    document.addEventListener('touchstart', _startGameNow, { once: true });
     </script>
 </body>
 
