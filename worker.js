@@ -14,42 +14,69 @@ async function getIndex() {
   return assetIndex;
 }
 
-async function serveFile(filePath) {
+async function serveVcskyStream(filePath) {
   const idx = await getIndex();
   if (!idx || !(filePath in idx)) return null;
 
   const offset = idx[filePath];
-  // Fetch tar header (512B) + file data
-  // Read a generous buffer to ensure we get the full header + file
-  const endByte = offset + 512 + 50000000; // 50MB max file size
-  const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
-    headers: { Range: `bytes=${offset}-${endByte}` },
+  // Request just enough to get tar header + small files in one shot
+  // For large files, we'll stream the rest
+  const headResp = await fetch(`${RELEASE}/vcsky-all.tar`, {
+    headers: { Range: `bytes=${offset}-${offset + 511}` },
     redirect: 'follow',
   });
-  if (!resp.ok) return null;
+  if (!headResp.ok) return null;
 
-  const buffer = await resp.arrayBuffer();
-  const data = new Uint8Array(buffer);
-  if (data.length < 512) return null;
+  const headerBuf = await headResp.arrayBuffer();
+  if (headerBuf.byteLength < 512) return null;
 
-  const sizeStr = new TextDecoder().decode(data.slice(124, 136)).replace(/\0/g, '');
+  const header = new Uint8Array(headerBuf);
+  const sizeStr = new TextDecoder().decode(header.slice(124, 136)).replace(/\0/g, '');
   const fileSize = parseInt(sizeStr, 8);
   if (!fileSize || fileSize > 50000000) return null;
 
-  const fileData = data.slice(512, 512 + fileSize);
+  // For tiny files, serve in one request
+  if (fileSize < 65536) {
+    const fullResp = await fetch(`${RELEASE}/vcsky-all.tar`, {
+      headers: { Range: `bytes=${offset}-${offset + 511 + fileSize}` },
+      redirect: 'follow',
+    });
+    if (!fullResp.ok) return null;
+    const buf = await fullResp.arrayBuffer();
+    const data = new Uint8Array(buf).slice(512, 512 + fileSize);
+    return new Response(data, {
+      headers: {
+        'Content-Type': getContentType(filePath),
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=86400',
+      }
+    });
+  }
 
-  let ct = 'application/octet-stream';
-  const ext = filePath.split('.').pop().toLowerCase();
-  if (ext === 'mp3') ct = 'audio/mpeg';
-  else if (ext === 'wav') ct = 'audio/wav';
+  // For large files, stream: request the data and pipe it
+  const streamResp = await fetch(`${RELEASE}/vcsky-all.tar`, {
+    headers: { Range: `bytes=${offset + 512}-${offset + 511 + fileSize}` },
+    redirect: 'follow',
+  });
+  if (!streamResp.ok) return null;
 
-  return new Response(fileData, {
+  return new Response(streamResp.body, {
     headers: {
-      'Content-Type': ct,
+      'Content-Type': getContentType(filePath),
+      'Content-Length': String(fileSize),
       'Access-Control-Allow-Origin': '*',
       'Cache-Control': 'public, max-age=86400',
     }
   });
+}
+
+function getContentType(path) {
+  const ext = path.split('.').pop().toLowerCase();
+  const types = {
+    mp3: 'audio/mpeg', wav: 'audio/wav', adf: 'application/octet-stream',
+    txd: 'application/octet-stream', dff: 'application/octet-stream',
+  };
+  return types[ext] || 'application/octet-stream';
 }
 
 async function handleRequest(request) {
@@ -66,39 +93,38 @@ async function handleRequest(request) {
     });
   }
 
-  // Core files from GitHub Releases
+  // Core data/wasm — stream directly from GitHub
   if (path === '/index.data' || path === '/index.wasm') {
     const resp = await fetch(`${RELEASE}${path}`, { redirect: 'follow' });
+    if (!resp.ok) return new Response('Not Found', { status: 404 });
     return new Response(resp.body, {
-      status: resp.status,
       headers: {
+        'Content-Type': 'application/octet-stream',
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'public, max-age=86400',
       }
     });
   }
 
-  // All vcsky assets from complete tar
+  // vcsky assets from tar (streaming for large files)
   if (path.startsWith('/vcsky/')) {
-    const result = await serveFile(path.slice(1));
+    const result = await serveVcskyStream(path.slice(1));
     if (result) return result;
   }
 
-  // vcbr brotli-compressed files from GitHub Releases
+  // vcbr brotli files — stream directly
   if (path.startsWith('/vcbr/')) {
     const filename = path.slice(6);
     const resp = await fetch(`${RELEASE}/${filename}`, { redirect: 'follow' });
-    if (resp.ok) {
-      return new Response(resp.body, {
-        status: resp.status,
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Content-Encoding': 'br',
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'public, max-age=86400',
-        }
-      });
-    }
+    if (!resp.ok) return new Response('Not Found', { status: 404 });
+    return new Response(resp.body, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'br',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=86400',
+      }
+    });
   }
 
   return new Response('Not Found', { status: 404 });
