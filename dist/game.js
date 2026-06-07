@@ -7,9 +7,11 @@ var wasm_content;
 
 const params = new URLSearchParams(window.location.search);
 
-// Base URLs
-const replaceFetch = (str) => str.replace("https://cdn.dos.zone/vcsky/", "/vcsky/")
-const replaceBR = "/vcbr/"
+// Base URLs — use Worker directly when hosted, local proxy when dev
+var isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.') || location.hostname.startsWith('192.168.');
+var WORKER = isLocal ? '' : 'https://gta-cors-proxy.f4d.workers.dev';
+const replaceFetch = (str) => str.replace("https://cdn.dos.zone/vcsky/", WORKER + "/vcsky/")
+const replaceBR = WORKER + "/vcbr/"
 
 // Configurable mode - show settings UI before play
 const configurableMode = params.get('configurable') === "1";
