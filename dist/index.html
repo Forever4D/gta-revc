@@ -141,12 +141,9 @@
         }
         #splash-screen .bar-fill {
             height: 100%;
+            width: 0%;
             background: #ff6b35;
-            animation: splash-load 4.5s ease-in-out forwards;
-        }
-        @keyframes splash-load {
-            0% { width: 0%; }
-            100% { width: 100%; }
+            transition: width 0.3s ease;
         }
         .start-container {
             position: relative;
@@ -615,8 +612,8 @@
 >
     <div id="splash-screen">
         <div class="title">Grand Theft Auto: Vice City</div>
-        <div class="subtitle">Loading game contents...</div>
-        <div class="bar"><div class="bar-fill"></div></div>
+        <div class="subtitle" id="splash-status">Initializing...</div>
+        <div class="bar"><div class="bar-fill" id="splash-bar"></div></div>
         <div class="credit">Compiled by Forever4D</div>
     </div>
     <div class="wasted-container" hidden>
@@ -789,11 +786,7 @@
     (function autoStart() {
         if (typeof startGame !== 'function') return setTimeout(autoStart, 100);
         if (typeof haveOriginalGame !== 'undefined') haveOriginalGame = true;
-        setTimeout(function() {
-            var splash = document.getElementById('splash-screen');
-            if (splash) splash.style.display = 'none';
-            startGame(null);
-        }, 5000);
+        startGame(null);
     })();
     </script>
 </body>

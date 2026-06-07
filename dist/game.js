@@ -28,7 +28,7 @@ let isTouch = isMobile && window.matchMedia('(pointer: coarse)').matches;
 
 document.body.dataset.isTouch = isTouch ? 1 : 0;
 
-const dataSize = 130 * 1024 * 1024;
+const dataSize = 138 * 1024 * 1024;
 const textDecoder = new TextDecoder();
 let haveOriginalGame = false;
 const translations = {
@@ -259,26 +259,17 @@ async function startGame(e) {
 }
 
 function setStatus(text) {
-    if (!text) {
-        progressElement.hidden = true;
-        spinnerElement.hidden = true;
-        return;
-    }
-    const match = text.match(/(.+)\((\d+\.?\d*)\/(\d+)\)/);
+    var splashStatus = document.getElementById('splash-status');
+    var splashBar = document.getElementById('splash-bar');
+    if (!text) return;
+    var match = text.match(/(.+)\((\d+\.?\d*)\/(\d+)\)/);
     if (match) {
-        const [current, total] = match.slice(2, 4).map(Number);
-        const percent = (current / total * 100).toFixed(0);
-        statusElement.textContent = t("downloading") + ` ${percent}%`;
-        progressElement.value = current;
-        progressElement.max = total;
-        progressElement.hidden = false;
-        spinnerElement.hidden = false;
-        const progressBarFill = spinnerElement.querySelector('.progress-bar-fill');
-        if (progressBarFill) {
-            progressBarFill.style.width = percent + '%';
-        }
-    } else {
-        statusElement.textContent = text;
+        var current = Number(match[2]), total = Number(match[3]);
+        var percent = (current / total * 100).toFixed(0);
+        if (splashStatus) splashStatus.textContent = 'Downloading... ' + percent + '%';
+        if (splashBar) splashBar.style.width = percent + '%';
+    } else if (splashStatus) {
+        splashStatus.textContent = text;
     }
 };
 
@@ -291,6 +282,9 @@ async function loadGame(data) {
             } catch (e) {
                 console.error('mainCalled error:', e);
             }
+            // Hide splash screen when game actually starts
+            var splash = document.getElementById('splash-screen');
+            if (splash) splash.style.display = 'none';
         },
         syncRevcIni: () => {
             try {
