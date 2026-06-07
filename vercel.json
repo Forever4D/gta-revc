@@ -1,23 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/vcsky/(.*)",
-      "dest": "https://cdn.dos.zone/vcsky/$1"
+      "source": "/vcsky/(.*)",
+      "destination": "https://cdn.dos.zone/vcsky/$1"
     },
     {
-      "src": "/vcbr/(.*)",
-      "dest": "https://br.cdn.dos.zone/vcsky/$1"
+      "source": "/vcbr/(.*)",
+      "destination": "https://br.cdn.dos.zone/vcsky/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
+      "source": "/(.*)",
+      "destination": "/dist/$1"
     }
   ]
 }
