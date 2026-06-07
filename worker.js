@@ -15,106 +15,61 @@ async function getIndex() {
   return assetIndex;
 }
 
-function contentType(path) {
-  const ext = path.split('.').pop().toLowerCase();
-  const t = { mp3:'audio/mpeg', wav:'audio/wav' };
-  return t[ext] || 'application/octet-stream';
-}
-
-async function serveVcsky(filePath) {
-  const idx = await getIndex();
-  if (!idx || !(filePath in idx)) return null;
-
-  const offset = idx[filePath];
-  const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
-    headers: { Range: `bytes=${offset}-${offset + 511}` },
-    redirect: 'follow',
-  });
-  if (!resp.ok) return null;
-
-  const headerBuf = new Uint8Array(await resp.arrayBuffer());
-  if (headerBuf.length < 512) return null;
-
-  const sizeStr = new TextDecoder().decode(headerBuf.slice(124, 136)).replace(/\0/g, '');
-  const fileSize = parseInt(sizeStr, 8);
-  if (!fileSize || fileSize > 50000000) return null;
-
-  // Fetch header + data
-  const fullResp = await fetch(`${RELEASE}/vcsky-all.tar`, {
-    headers: { Range: `bytes=${offset}-${offset + 511 + fileSize}` },
-    redirect: 'follow',
-  });
-  if (!fullResp.ok) return null;
-
-  const buf = new Uint8Array(await fullResp.arrayBuffer());
-  const data = buf.slice(512, 512 + fileSize);
-
-  return new Response(data, {
-    headers: Object.assign({}, CORS, {
-      'Content-Type': contentType(filePath),
-      'Content-Length': String(fileSize),
-      'Cache-Control': 'public, max-age=86400',
-    })
-  });
-}
-
 async function handleRequest(request) {
   const url = new URL(request.url);
-  const path = url.pathname;
+  const p = url.pathname;
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: Object.assign({}, CORS, {
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Max-Age': '86400',
-      })
-    });
+    return new Response(null, { headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Max-Age': '86400' } });
   }
 
-  try {
-    // Index file
-    if (path === '/vcsky-all-index.json') {
-      const resp = await fetch(`${RELEASE}/vcsky-all-index.json`, { redirect: 'follow' });
-      if (!resp.ok) return new Response('NF', { status: 404, headers: CORS });
-      return new Response(resp.body, {
-        headers: Object.assign({}, CORS, { 'Content-Type': 'application/json' })
+  // vcsky assets
+  if (p.startsWith('/vcsky/')) {
+    const idx = await getIndex();
+    if (!idx) return new Response('no-index', { status: 500, headers: CORS });
+
+    const filePath = p.slice(1);
+    if (!(filePath in idx)) return new Response('no-key', { status: 404, headers: CORS });
+
+    const offset = idx[filePath];
+    // Follow redirect manually - GitHub drops Range header on auto-follow
+    let tarUrl = `${RELEASE}/vcsky-all.tar`;
+    let resp = await fetch(tarUrl, { redirect: 'manual' });
+    if (resp.status === 302 || resp.status === 301) {
+      tarUrl = resp.headers.get('Location');
+      resp = await fetch(tarUrl, {
+        headers: { Range: `bytes=${offset}-${offset + 59999}` },
       });
     }
+    if (!resp.ok) return new Response('range-fail:' + resp.status, { status: 502, headers: CORS });
 
-    // Core data/wasm
-    if (path === '/index.data' || path === '/index.wasm') {
-      const resp = await fetch(`${RELEASE}${path}`, { redirect: 'follow' });
-      if (!resp.ok) return new Response('NF', { status: 404, headers: CORS });
-      return new Response(resp.body, {
-        headers: Object.assign({}, CORS, {
-          'Content-Type': 'application/octet-stream',
-          'Cache-Control': 'public, max-age=86400',
-        })
-      });
-    }
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    if (buf.length < 512) return new Response('short', { status: 502, headers: CORS });
 
-    // vcsky assets
-    if (path.startsWith('/vcsky/')) {
-      const result = await serveVcsky(path.slice(1));
-      if (result) return result;
-    }
+    const sizeStr = new TextDecoder().decode(buf.slice(124, 136)).replace(/\0/g, '');
+    const fileSize = parseInt(sizeStr, 8);
+    if (!fileSize || fileSize > 50000000) return new Response('bad-size', { status: 502, headers: CORS });
 
-    // vcbr
-    if (path.startsWith('/vcbr/')) {
-      const filename = path.slice(6);
-      const resp = await fetch(`${RELEASE}/${filename}`, { redirect: 'follow' });
-      if (!resp.ok) return new Response('NF', { status: 404, headers: CORS });
-      return new Response(resp.body, {
-        headers: Object.assign({}, CORS, {
-          'Content-Type': 'application/octet-stream',
-          'Content-Encoding': 'br',
-          'Cache-Control': 'public, max-age=86400',
-        })
-      });
-    }
-  } catch(e) {
-    return new Response('Error', { status: 500, headers: CORS });
+    const data = buf.slice(512, 512 + fileSize);
+    const ext = filePath.split('.').pop().toLowerCase();
+    const ct = { mp3: 'audio/mpeg', wav: 'audio/wav' }[ext] || 'application/octet-stream';
+
+    return new Response(data, { headers: { ...CORS, 'Content-Type': ct, 'Content-Length': '' + fileSize, 'Cache-Control': 'public, max-age=86400' } });
   }
 
-  return new Response('NF', { status: 404, headers: CORS });
+  // Direct GitHub proxy for core files
+  if (p === '/index.data' || p === '/index.wasm' || p === '/vcsky-all-index.json') {
+    const resp = await fetch(`${RELEASE}${p}`, { redirect: 'follow' });
+    if (!resp.ok) return new Response('nf', { status: 404, headers: CORS });
+    return new Response(resp.body, { headers: { ...CORS, 'Content-Type': 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' } });
+  }
+
+  // vcbr
+  if (p.startsWith('/vcbr/')) {
+    const resp = await fetch(`${RELEASE}/${p.slice(6)}`, { redirect: 'follow' });
+    if (!resp.ok) return new Response('nf', { status: 404, headers: CORS });
+    return new Response(resp.body, { headers: { ...CORS, 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'br', 'Cache-Control': 'public, max-age=86400' } });
+  }
+
+  return new Response('nf', { status: 404, headers: CORS });
 }
