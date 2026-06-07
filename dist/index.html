@@ -782,45 +782,17 @@
     // 2. كإجراء احتياطي: تفعيل التحكمات بمجرد لمس الشاشة لأول مرة
     window.addEventListener('touchstart', forceEnableTouchControls, { once: true });
     </script>
-    <script src="preload.js"></script>
     <script>
-    // Register Service Worker for audio caching
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) { console.log('SW register:', e); });
-    }
-    // Wait for user click before starting game, then preload audio in background
     var _gameStarted = false;
-    var _audioPreloaded = false;
     function _startGameNow() {
         if (_gameStarted) return;
         _gameStarted = true;
         if (typeof haveOriginalGame !== 'undefined') haveOriginalGame = true;
-        var ss = document.getElementById('splash-status');
-        var sb = document.getElementById('splash-bar');
-        if (ss) ss.textContent = 'Checking cached audio...';
-        if (sb) sb.style.width = '0%';
         startGame(null);
-        // Background preload
-        var isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.');
-        if (!isLocal && navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage('preload');
-        }
     }
     document.addEventListener('click', _startGameNow, { once: true });
     document.addEventListener('keydown', _startGameNow, { once: true });
     document.addEventListener('touchstart', _startGameNow, { once: true });
-    // Listen for SW preload progress
-    if (navigator.serviceWorker) {
-        navigator.serviceWorker.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'preload-progress') {
-                var ss = document.getElementById('splash-status');
-                var sb = document.getElementById('splash-bar');
-                var pct = Math.round(event.data.loaded / event.data.total * 100);
-                if (ss) ss.textContent = 'Preloading audio: ' + pct + '% (' + event.data.loaded + '/' + event.data.total + ')';
-                if (sb) sb.style.width = pct + '%';
-            }
-        });
-    }
     </script>
 </body>
 
