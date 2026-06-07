@@ -169,9 +169,14 @@ function updateAllTranslations() {
 
 // Function to update game data files based on language
 function updateGameDataForLanguage(lang) {
-    // Always use same-origin paths — server/host handles the actual source
-    data_content = "/index.data";
-    wasm_content = "/index.wasm";
+    var isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.') || location.hostname.startsWith('192.168.');
+    if (isLocal) {
+        data_content = "/index.data";
+        wasm_content = "/index.wasm";
+    } else {
+        data_content = "https://gta-cors-proxy.f4d.workers.dev/index.data";
+        wasm_content = "https://gta-cors-proxy.f4d.workers.dev/index.wasm";
+    }
 }
 
 // Initialize data files based on current language
