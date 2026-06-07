@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "buildCommand": "echo 'Static deploy - no build needed'",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/vcsky/(.*)",
@@ -11,7 +14,12 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/dist/$1"
+      "destination": "/$1"
     }
-  ]
+  ],
+  "functions": {
+    "api/**": {
+      "exclude": true
+    }
+  }
 }
