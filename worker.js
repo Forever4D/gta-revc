@@ -4,23 +4,23 @@ addEventListener('fetch', event => {
 
 const RELEASE = 'https://github.com/Forever4D/gta-revc/releases/download/v1.0';
 
-let audioIndex = null;
+let assetIndex = null;
 
 async function getIndex() {
-  if (audioIndex) return audioIndex;
-  const resp = await fetch(`${RELEASE}/vcsky-index.json`, { redirect: 'follow' });
+  if (assetIndex) return assetIndex;
+  const resp = await fetch(`${RELEASE}/vcsky-all-index.json`, { redirect: 'follow' });
   if (!resp.ok) throw new Error(`Index fetch failed: ${resp.status}`);
-  audioIndex = await resp.json();
-  return audioIndex;
+  assetIndex = await resp.json();
+  return assetIndex;
 }
 
-async function serveAudioFile(filePath) {
+async function serveAssetFile(filePath) {
   try {
     const index = await getIndex();
     if (!index || !(filePath in index)) return null;
 
     const offset = index[filePath];
-    const resp = await fetch(`${RELEASE}/vcsky-audio.tar`, {
+    const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
       headers: { Range: `bytes=${offset}-` },
       redirect: 'follow',
     });
@@ -90,17 +90,15 @@ async function handleRequest(request) {
     return new Response(resp.body, { status: resp.status, headers });
   }
 
-  // Audio files via tar archive
-  if (path.startsWith('/vcsky/fetched/audio')) {
-    const result = await serveAudioFile(path.slice(1));
+  // All vcsky assets from complete tar (models, textures, audio, anims)
+  if (path.startsWith('/vcsky/')) {
+    const result = await serveAssetFile(path.slice(1));
     if (result) return result;
   }
 
-  // Other vcsky/vcbr proxy
-  let target = null;
-  if (path.startsWith('/vcsky/')) target = 'https://cdn.dos.zone' + path;
-  if (path.startsWith('/vcbr/')) target = 'https://br.cdn.dos.zone/vcsky/' + path.slice(6);
-  if (target) {
+  // vcbr proxy (brotli assets)
+  if (path.startsWith('/vcbr/')) {
+    const target = 'https://br.cdn.dos.zone/vcsky/' + path.slice(6);
     const resp = await fetch(target, { redirect: 'follow' });
     const headers = new Headers(resp.headers);
     headers.set('Access-Control-Allow-Origin', '*');
