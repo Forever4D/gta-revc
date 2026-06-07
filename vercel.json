@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/vcsky/(.*)",
+      "dest": "https://cdn.dos.zone/vcsky/$1"
+    },
+    {
+      "src": "/vcbr/(.*)",
+      "dest": "https://br.cdn.dos.zone/vcsky/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/$1"
+    }
+  ]
+}

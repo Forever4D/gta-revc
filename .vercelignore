@@ -1,0 +1,7 @@
+# Exclude large files from Vercel deployment
+dist/index.data
+dist/index.wasm
+revcdos.bin
+*.bin
+__pycache__
+*.py

@@ -226,34 +226,34 @@ async function loadData() {
 };
 
 async function startGame(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
 
-    document.querySelector('.start-container').style.display = 'none';
-    document.querySelector('.disclaimer').style.display = 'none';
-    document.querySelector('.developed-by').style.display = 'none';
+    try {
+        document.querySelector('.start-container').style.display = 'none';
+        document.querySelector('.disclaimer').style.display = 'none';
+        document.querySelector('.developed-by').style.display = 'none';
 
-    const intro = document.querySelector('.intro');
-    const introContainer = document.querySelector('.intro-container');
-    const loaderContainer = document.querySelector('.loader-container');
-    document.querySelector('.click-to-play').style.display = 'none';
-    loaderContainer.style.display = "flex";
-    introContainer.hidden = false;
-    intro.play();
+        const intro = document.querySelector('.intro');
+        const introContainer = document.querySelector('.intro-container');
+        const loaderContainer = document.querySelector('.loader-container');
+        if (document.querySelector('.click-to-play')) {
+            document.querySelector('.click-to-play').style.display = 'none';
+        }
+        loaderContainer.style.display = "flex";
+        statusElement.textContent = "Loading game data...";
+        spinnerElement.hidden = false;
 
-    const dataBuffer = await loadData();
-    spinnerElement.hidden = true;
-    setStatus(t("clickToContinue"));
-    introContainer.hidden = false;
-    introContainer.style.cursor = 'pointer';
-    const clickHandler = () => {
-        intro.pause();
-        introContainer.style.display = 'none';
+        const dataBuffer = await loadData();
+        spinnerElement.hidden = true;
+
+        if (intro && introContainer) {
+            introContainer.style.display = 'none';
+        }
         loadGame(dataBuffer);
-    };
-    if (isMobile) {
-        window.addEventListener('pointerup', clickHandler, { once: true });
-    } else {
-        window.addEventListener('click', clickHandler, { once: true });
+    } catch(err) {
+        console.error("startGame error:", err);
+        statusElement.textContent = "Error: " + err.message;
+        spinnerElement.hidden = true;
     }
 }
 
@@ -819,7 +819,7 @@ if (configurableMode) {
         
         // Update config panel labels with current language
         updateAllTranslations();
-        
+
         // Language selector handler
         if (configLang) {
             configLang.addEventListener('change', (e) => {
@@ -828,18 +828,20 @@ if (configurableMode) {
                 updateAllTranslations();
             });
         }
-        
+
         // Update settings when changed
         configCheats.addEventListener('change', (e) => {
             cheatsEnabled = e.target.checked;
         });
-        
+
         configFullscreen.addEventListener('change', (e) => {
             autoFullScreen = e.target.checked;
         });
-        
+
         configMaxFps.addEventListener('input', (e) => {
             maxFPS = parseInt(e.target.value) || 0;
         });
     }
 }
+
+// Auto-start handled by index.html inline script
