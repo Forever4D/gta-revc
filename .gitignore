@@ -1,11 +1,12 @@
-*.pyc
-__pycache__/
-*.$py.class
-
-.DS_Store
-
-vcbr/
-vcsky/
-saves/
-unpacked/
+# Large binary files (hosted via CDN, not in git)
 *.bin
+dist/index.data
+dist/index.wasm
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

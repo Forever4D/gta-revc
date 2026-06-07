@@ -366,6 +366,7 @@ async def read_index():
         })
     return Response("index.html not found", status_code=404)
 
+# Note: dist/index.data and dist/index.wasm are pre-extracted from the packed archive
 app.mount("/", StaticFiles(directory="dist"), name="root")
 
 
