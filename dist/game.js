@@ -177,8 +177,8 @@ function updateGameDataForLanguage(lang) {
     } else {
         // Hosted: use GitHub Releases
         var releaseBase = "https://github.com/Forever4D/gta-revc/releases/download/v1.0";
-        data_content = releaseBase + "/index.data.gz";
-        wasm_content = releaseBase + "/index.wasm.gz";
+        data_content = releaseBase + "/index.data";
+        wasm_content = releaseBase + "/index.wasm";
     }
 }
 
