@@ -84,17 +84,21 @@ async function handleRequest(request) {
     if (result) return result;
   }
 
-  // vcbr fallback
+  // vcbr brotli-compressed files from GitHub Releases
   if (path.startsWith('/vcbr/')) {
-    const target = 'https://br.cdn.dos.zone/vcsky/' + path.slice(6);
-    try {
-      const resp = await fetch(target, { redirect: 'follow' });
-      if (resp.ok) {
-        return new Response(resp.body, {
-          headers: { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=86400' }
-        });
-      }
-    } catch (e) {}
+    const filename = path.slice(6);
+    const resp = await fetch(`${RELEASE}/${filename}`, { redirect: 'follow' });
+    if (resp.ok) {
+      return new Response(resp.body, {
+        status: resp.status,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Encoding': 'br',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=86400',
+        }
+      });
+    }
   }
 
   return new Response('Not Found', { status: 404 });
