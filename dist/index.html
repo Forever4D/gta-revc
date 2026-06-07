@@ -786,7 +786,7 @@
     <script>
     // Register Service Worker for audio caching
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/dist/sw.js', { scope: '/' }).catch(() => {});
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) { console.log('SW register:', e); });
     }
     // Wait for user click before starting game, then preload audio in background
     var _gameStarted = false;
