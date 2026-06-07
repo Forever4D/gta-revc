@@ -4,23 +4,24 @@ addEventListener('fetch', event => {
 
 const RELEASE = 'https://github.com/Forever4D/gta-revc/releases/download/v1.0';
 
-let assetIndex = null;
+let audioIndex = null;
 
-async function getIndex() {
-  if (assetIndex) return assetIndex;
-  const resp = await fetch(`${RELEASE}/vcsky-all-index.json`, { redirect: 'follow' });
+async function getAudioIndex() {
+  if (audioIndex) return audioIndex;
+  // Use the audio-only index (smaller, loads faster)
+  const resp = await fetch(`${RELEASE}/vcsky-index.json`, { redirect: 'follow' });
   if (!resp.ok) throw new Error(`Index fetch failed: ${resp.status}`);
-  assetIndex = await resp.json();
-  return assetIndex;
+  audioIndex = await resp.json();
+  return audioIndex;
 }
 
-async function serveAssetFile(filePath) {
+async function serveFromTar(filePath, tarName) {
   try {
-    const index = await getIndex();
+    const index = await getAudioIndex();
     if (!index || !(filePath in index)) return null;
 
     const offset = index[filePath];
-    const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
+    const resp = await fetch(`${RELEASE}/${tarName}`, {
       headers: { Range: `bytes=${offset}-` },
       redirect: 'follow',
     });
@@ -51,9 +52,13 @@ async function serveAssetFile(filePath) {
       dataPos += toCopy;
     }
 
+    let ct = 'application/octet-stream';
+    if (filePath.endsWith('.mp3')) ct = 'audio/mpeg';
+    else if (filePath.endsWith('.wav')) ct = 'audio/wav';
+
     return new Response(data, {
       headers: {
-        'Content-Type': filePath.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav',
+        'Content-Type': ct,
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'public, max-age=86400',
       }
@@ -77,32 +82,32 @@ async function handleRequest(request) {
     });
   }
 
-  const fileMap = {
-    '/index.data': `${RELEASE}/index.data`,
-    '/index.wasm': `${RELEASE}/index.wasm`,
-  };
-
-  if (path in fileMap) {
-    const resp = await fetch(fileMap[path], { redirect: 'follow' });
+  // Core data files from GitHub Releases
+  if (path === '/index.data' || path === '/index.wasm') {
+    const resp = await fetch(`${RELEASE}${path}`, { redirect: 'follow' });
     const headers = new Headers(resp.headers);
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Cache-Control', 'public, max-age=86400');
     return new Response(resp.body, { status: resp.status, headers });
   }
 
-  // All vcsky assets from complete tar (models, textures, audio, anims)
-  if (path.startsWith('/vcsky/')) {
-    const result = await serveAssetFile(path.slice(1));
+  // Audio from tar
+  if (path.startsWith('/vcsky/fetched/audio')) {
+    const result = await serveFromTar(path.slice(1), 'vcsky-audio.tar');
     if (result) return result;
   }
 
-  // vcbr proxy (brotli assets)
+  // vcbr proxy
   if (path.startsWith('/vcbr/')) {
     const target = 'https://br.cdn.dos.zone/vcsky/' + path.slice(6);
-    const resp = await fetch(target, { redirect: 'follow' });
-    const headers = new Headers(resp.headers);
-    headers.set('Access-Control-Allow-Origin', '*');
-    return new Response(resp.body, { status: resp.status, headers });
+    try {
+      const resp = await fetch(target, { redirect: 'follow' });
+      const headers = new Headers(resp.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      return new Response(resp.body, { status: resp.status, headers });
+    } catch (e) {
+      return new Response('Not Found', { status: 404 });
+    }
   }
 
   return new Response('Not Found', { status: 404 });
