@@ -5,12 +5,8 @@
   ],
   "routes": [
     {
-      "src": "/index.data",
-      "dest": "https://gta-cors-proxy.f4d.workers.dev/index.data"
-    },
-    {
-      "src": "/index.wasm",
-      "dest": "https://gta-cors-proxy.f4d.workers.dev/index.wasm"
+      "src": "/(.*\\.(?:data|wasm|mp3|wav|adf|txd|dff|dat|ifp|col|ipl|ide|cfg|zon|scm|sc|gxt))",
+      "dest": "https://gta-cors-proxy.f4d.workers.dev/$1"
     },
     {
       "src": "/vcsky/(.*)",
