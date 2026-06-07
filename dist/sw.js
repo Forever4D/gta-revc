@@ -54,18 +54,18 @@ self.addEventListener('message', async (event) => {
     for (let i = 0; i < audioFiles.length; i += 10) {
       const batch = audioFiles.slice(i, i + 10);
       await Promise.all(batch.map(async (path) => {
-        const cached = await cache.match('/vcsky/' + path);
+        const cacheKey = '/' + path;
+        const cached = await cache.match(cacheKey);
         if (cached) { loaded++; return; }
         try {
-          const resp = await fetch('https://gta-cors-proxy.f4d.workers.dev/vcsky/' + path);
+          const resp = await fetch('https://gta-cors-proxy.f4d.workers.dev/' + path);
           if (resp.ok) {
-            await cache.put('/vcsky/' + path, resp.clone());
+            await cache.put(cacheKey, resp.clone());
             loaded++;
           }
         } catch(e) {}
       }));
       sendProgress();
-      // Tiny delay between batches
       await new Promise(r => setTimeout(r, 30));
     }
 
