@@ -5,16 +5,12 @@
   ],
   "routes": [
     {
-      "src": "/(.*\\.(?:data|wasm|mp3|wav|adf|txd|dff|dat|ifp|col|ipl|ide|cfg|zon|scm|sc|gxt))",
-      "dest": "https://gta-cors-proxy.f4d.workers.dev/$1"
-    },
-    {
       "src": "/vcsky/(.*)",
-      "dest": "https://gta-cors-proxy.f4d.workers.dev/vcsky/$1"
+      "dest": "https://cdn.dos.zone/vcsky/$1"
     },
     {
       "src": "/vcbr/(.*)",
-      "dest": "https://gta-cors-proxy.f4d.workers.dev/vcbr/$1"
+      "dest": "https://br.cdn.dos.zone/vcsky/$1"
     },
     {
       "src": "/(.*)",

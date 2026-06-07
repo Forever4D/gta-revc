@@ -4,63 +4,52 @@ addEventListener('fetch', event => {
 
 const RELEASE = 'https://github.com/Forever4D/gta-revc/releases/download/v1.0';
 
-let index = null;
+let assetIndex = null;
 
 async function getIndex() {
-  if (index) return index;
+  if (assetIndex) return assetIndex;
   const resp = await fetch(`${RELEASE}/vcsky-all-index.json`, { redirect: 'follow' });
-  index = await resp.json();
-  return index;
+  if (!resp.ok) return null;
+  assetIndex = await resp.json();
+  return assetIndex;
 }
 
-async function serveFromTar(filePath) {
-  try {
-    const idx = await getIndex();
-    if (!idx || !(filePath in idx)) return null;
-    const offset = idx[filePath];
+async function serveFile(filePath) {
+  const idx = await getIndex();
+  if (!idx || !(filePath in idx)) return null;
 
-    const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
-      headers: { Range: `bytes=${offset}-` },
-      redirect: 'follow',
-    });
-    if (!resp.ok) return null;
+  const offset = idx[filePath];
+  // Fetch tar header (512B) + file data
+  // Read a generous buffer to ensure we get the full header + file
+  const endByte = offset + 512 + 50000000; // 50MB max file size
+  const resp = await fetch(`${RELEASE}/vcsky-all.tar`, {
+    headers: { Range: `bytes=${offset}-${endByte}` },
+    redirect: 'follow',
+  });
+  if (!resp.ok) return null;
 
-    const reader = resp.body.getReader();
-    const readBytes = async (n) => {
-      let buf = new Uint8Array(n), pos = 0;
-      while (pos < n) {
-        const { value, done } = await reader.read();
-        if (done || !value) break;
-        const cp = value.slice(0, n - pos);
-        buf.set(cp, pos);
-        pos += cp.length;
-      }
-      return buf;
-    };
+  const buffer = await resp.arrayBuffer();
+  const data = new Uint8Array(buffer);
+  if (data.length < 512) return null;
 
-    const header = await readBytes(512);
-    const sizeStr = new TextDecoder().decode(header.slice(124, 136)).replace(/\0/g, '');
-    const fileSize = parseInt(sizeStr, 8);
-    if (!fileSize || fileSize > 100 * 1024 * 1024) return null;
+  const sizeStr = new TextDecoder().decode(data.slice(124, 136)).replace(/\0/g, '');
+  const fileSize = parseInt(sizeStr, 8);
+  if (!fileSize || fileSize > 50000000) return null;
 
-    const data = await readBytes(fileSize);
+  const fileData = data.slice(512, 512 + fileSize);
 
-    let ct = 'application/octet-stream';
-    const ext = filePath.split('.').pop().toLowerCase();
-    if (ext === 'mp3') ct = 'audio/mpeg';
-    else if (ext === 'wav') ct = 'audio/wav';
-    else if (ext === 'png') ct = 'image/png';
+  let ct = 'application/octet-stream';
+  const ext = filePath.split('.').pop().toLowerCase();
+  if (ext === 'mp3') ct = 'audio/mpeg';
+  else if (ext === 'wav') ct = 'audio/wav';
 
-    return new Response(data, {
-      headers: {
-        'Content-Type': ct,
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=86400',
-      }
-    });
-  } catch (e) {
-    return null;
-  }
+  return new Response(fileData, {
+    headers: {
+      'Content-Type': ct,
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=86400',
+    }
+  });
 }
 
 async function handleRequest(request) {
@@ -77,22 +66,21 @@ async function handleRequest(request) {
     });
   }
 
-  // Core data/wasm files
+  // Core files from GitHub Releases
   if (path === '/index.data' || path === '/index.wasm') {
     const resp = await fetch(`${RELEASE}${path}`, { redirect: 'follow' });
     return new Response(resp.body, {
       status: resp.status,
       headers: {
-        'Content-Type': resp.headers.get('Content-Type') || 'application/octet-stream',
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'public, max-age=86400',
       }
     });
   }
 
-  // All vcsky assets from complete tar (31,222 files)
+  // All vcsky assets from complete tar
   if (path.startsWith('/vcsky/')) {
-    const result = await serveFromTar(path.slice(1));
+    const result = await serveFile(path.slice(1));
     if (result) return result;
   }
 
@@ -101,13 +89,11 @@ async function handleRequest(request) {
     const target = 'https://br.cdn.dos.zone/vcsky/' + path.slice(6);
     try {
       const resp = await fetch(target, { redirect: 'follow' });
-      return new Response(resp.body, {
-        status: resp.status,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          ...Object.fromEntries(resp.headers),
-        }
-      });
+      if (resp.ok) {
+        return new Response(resp.body, {
+          headers: { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=86400' }
+        });
+      }
     } catch (e) {}
   }
 
