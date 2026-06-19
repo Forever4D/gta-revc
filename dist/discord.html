@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>GTA Vice City</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #080510;
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .card {
+            text-align: center;
+            padding: 48px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(40px);
+        }
+        h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #ff6b35, #ffaa5c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        p {
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        button {
+            background: linear-gradient(135deg, #ff6b35, #e85520);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        button:hover {
+            transform: scale(1.04);
+            box-shadow: 0 8px 24px rgba(255,107,53,0.4);
+        }
+        .sub {
+            color: rgba(255,255,255,0.3);
+            font-size: 11px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Grand Theft Auto: Vice City</h1>
+        <p>This game requires cross-origin isolation. Click below to open in a new window.</p>
+        <button onclick="window.open('https://gta-revc.vercel.app','_blank','noopener')">Launch Game</button>
+        <div class="sub">Compiled by Forever4D &bull; revcDOS</div>
+    </div>
+</body>
+</html>
