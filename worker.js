@@ -33,7 +33,7 @@ async function handleRequest(request) {
 
     const offset = idx[filePath];
 
-    // Helper: fetch with manual redirect (preserves Range header)
+    // Single fetch with manual redirect (two fetches get different SAS tokens)
     async function fetchRange(url, rangeHeader) {
       let r = await fetch(url, { redirect: 'manual' });
       if (r.status === 302 || r.status === 301) {
@@ -42,25 +42,32 @@ async function handleRequest(request) {
       return r;
     }
 
-    // Step 1: fetch just the tar header (512 bytes) to get file size
-    let resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset}-${offset + 511}`);
-    if (!resp.ok) return new Response('hdr-fail:' + resp.status, { status: 502, headers: CORS });
-
-    const headerBuf = new Uint8Array(await resp.arrayBuffer());
-    if (headerBuf.length < 512) return new Response('short-hdr', { status: 502, headers: CORS });
-
-    const sizeStr = new TextDecoder().decode(headerBuf.slice(124, 136)).replace(/\0/g, '');
-    const fileSize = parseInt(sizeStr, 8);
-    if (!fileSize || fileSize > 50000000) return new Response('bad-size', { status: 502, headers: CORS });
-
-    // Step 2: fetch header + file data
-    resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset}-${offset + 511 + fileSize}`);
-    if (!resp.ok) return new Response('data-fail:' + resp.status, { status: 502, headers: CORS });
+    // Fetch header + enough data for most files in ONE request
+    let resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset}-${offset + 70000}`);
+    if (!resp.ok) return new Response('fail:' + resp.status, { status: 502, headers: CORS });
 
     const buf = new Uint8Array(await resp.arrayBuffer());
-    if (buf.length < 512 + fileSize) return new Response('short-data', { status: 502, headers: CORS });
+    if (buf.length < 512) return new Response('short', { status: 502, headers: CORS });
 
-    const data = buf.slice(512, 512 + fileSize);
+    const sizeStr = new TextDecoder().decode(buf.slice(124, 136)).replace(/\0/g, '');
+    let fileSize = parseInt(sizeStr, 8);
+    if (!fileSize || fileSize > 50000000) return new Response('bad-size', { status: 502, headers: CORS });
+
+    // If file is larger than what we fetched, get the rest
+    let data;
+    if (fileSize <= buf.length - 512) {
+      data = buf.slice(512, 512 + fileSize);
+    } else {
+      // Get just the remaining data
+      const remaining = fileSize - (buf.length - 512);
+      resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset + buf.length}-${offset + buf.length + remaining}`);
+      if (!resp.ok) return new Response('data-fail:' + resp.status, { status: 502, headers: CORS });
+      const rest = new Uint8Array(await resp.arrayBuffer());
+      const full = new Uint8Array(512 + fileSize);
+      full.set(buf.slice(0, 512 + buf.length - 512));
+      full.set(rest, buf.length);
+      data = full.slice(512, 512 + fileSize);
+    }
     const ext = filePath.split('.').pop().toLowerCase();
     const ct = { mp3: 'audio/mpeg', wav: 'audio/wav' }[ext] || 'application/octet-stream';
 
