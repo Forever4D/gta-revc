@@ -32,23 +32,33 @@ async function handleRequest(request) {
     if (!(filePath in idx)) return new Response('no-key', { status: 404, headers: CORS });
 
     const offset = idx[filePath];
-    // Follow redirect manually - GitHub drops Range header on auto-follow
-    let tarUrl = `${RELEASE}/vcsky-all.tar`;
-    let resp = await fetch(tarUrl, { redirect: 'manual' });
-    if (resp.status === 302 || resp.status === 301) {
-      tarUrl = resp.headers.get('Location');
-      resp = await fetch(tarUrl, {
-        headers: { Range: `bytes=${offset}-${offset + 59999}` },
-      });
+
+    // Helper: fetch with manual redirect (preserves Range header)
+    async function fetchRange(url, rangeHeader) {
+      let r = await fetch(url, { redirect: 'manual' });
+      if (r.status === 302 || r.status === 301) {
+        r = await fetch(r.headers.get('Location'), { headers: { Range: rangeHeader } });
+      }
+      return r;
     }
-    if (!resp.ok) return new Response('range-fail:' + resp.status, { status: 502, headers: CORS });
 
-    const buf = new Uint8Array(await resp.arrayBuffer());
-    if (buf.length < 512) return new Response('short', { status: 502, headers: CORS });
+    // Step 1: fetch just the tar header (512 bytes) to get file size
+    let resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset}-${offset + 511}`);
+    if (!resp.ok) return new Response('hdr-fail:' + resp.status, { status: 502, headers: CORS });
 
-    const sizeStr = new TextDecoder().decode(buf.slice(124, 136)).replace(/\0/g, '');
+    const headerBuf = new Uint8Array(await resp.arrayBuffer());
+    if (headerBuf.length < 512) return new Response('short-hdr', { status: 502, headers: CORS });
+
+    const sizeStr = new TextDecoder().decode(headerBuf.slice(124, 136)).replace(/\0/g, '');
     const fileSize = parseInt(sizeStr, 8);
     if (!fileSize || fileSize > 50000000) return new Response('bad-size', { status: 502, headers: CORS });
+
+    // Step 2: fetch header + file data
+    resp = await fetchRange(`${RELEASE}/vcsky-all.tar`, `bytes=${offset}-${offset + 511 + fileSize}`);
+    if (!resp.ok) return new Response('data-fail:' + resp.status, { status: 502, headers: CORS });
+
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    if (buf.length < 512 + fileSize) return new Response('short-data', { status: 502, headers: CORS });
 
     const data = buf.slice(512, 512 + fileSize);
     const ext = filePath.split('.').pop().toLowerCase();
