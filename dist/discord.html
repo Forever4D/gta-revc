@@ -34,21 +34,18 @@
             margin-bottom: 24px;
             font-size: 14px;
         }
-        a.launch {
-            display: inline-block;
+        button {
             background: linear-gradient(135deg, #ff6b35, #e85520);
             color: white;
-            text-decoration: none;
+            border: none;
             padding: 14px 40px;
             font-size: 16px;
             font-weight: 600;
             border-radius: 12px;
             cursor: pointer;
             letter-spacing: 1px;
-            transition: transform 0.15s, box-shadow 0.15s;
         }
-        a.launch:hover {
-            transform: scale(1.04);
+        button:hover {
             box-shadow: 0 8px 24px rgba(255,107,53,0.4);
         }
         .sub {
@@ -61,20 +58,59 @@
 <body>
     <div class="card">
         <h1>Grand Theft Auto: Vice City</h1>
-        <p>Click below to launch the game.</p>
-        <a class="launch" href="https://gta-revc.vercel.app" target="_blank" rel="noopener">Launch Game</a>
+        <p id="msg">Launching...</p>
+        <button id="btn" onclick="launch()" style="display:none">Launch Game</button>
         <div class="sub">Compiled by Forever4D &bull; revcDOS</div>
     </div>
+
+    <script src="https://unpkg.com/@discord/embedded-app-sdk@1/dist/index.global.js"></script>
     <script>
-    // Fallback: try window.open if link doesn't work
-    document.querySelector('a.launch').addEventListener('click', function(e) {
-        var w = window.open('https://gta-revc.vercel.app', '_blank', 'noopener');
-        if (!w || w.closed) {
-            // window.open blocked, let the link handle it
-            return;
+    const GAME_URL = 'https://gta-revc.vercel.app';
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('btn');
+
+    async function launch() {
+        // Try multiple methods to open the game
+        const methods = [
+            () => { window.open(GAME_URL, '_blank', 'noopener,noreferrer'); },
+            () => { open(GAME_URL, '_blank'); },
+            () => { document.location = GAME_URL; },
+        ];
+        for (const fn of methods) {
+            try {
+                const w = fn();
+                if (w && !w.closed) return;
+            } catch(e) {}
         }
-        e.preventDefault();
-    });
+        // Last resort: message for manual navigation
+        msg.textContent = 'Please copy and open: gta-revc.vercel.app';
+    }
+
+    async function init() {
+        try {
+            const discordSdk = new DiscordSDK('', { disableConsoleLogOverride: true });
+            await discordSdk.ready();
+
+            // Use Discord SDK to open link externally
+            btn.onclick = async () => {
+                try {
+                    await discordSdk.commands.openExternalLink({ url: GAME_URL });
+                } catch(e) {
+                    launch();
+                }
+            };
+
+            msg.textContent = 'Click below to launch the game.';
+            btn.style.display = 'inline-block';
+        } catch(e) {
+            // No Discord SDK available - show manual instructions
+            msg.textContent = 'Click below to launch the game.';
+            btn.style.display = 'inline-block';
+            btn.onclick = launch;
+        }
+    }
+
+    init();
     </script>
 </body>
 </html>
