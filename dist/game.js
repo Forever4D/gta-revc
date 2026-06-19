@@ -10,8 +10,8 @@ const params = new URLSearchParams(window.location.search);
 // Base URLs
 var isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.') || location.hostname.startsWith('192.168.');
 var WORKER = isLocal ? '' : 'https://gta-cors-proxy.f4d.workers.dev';
-const replaceFetch = (str) => str.replace("https://cdn.dos.zone/vcsky/", WORKER + "/vcsky/")
-const replaceBR = WORKER + "/vcbr/"
+const replaceFetch = (str) => str.replace("https://cdn.dos.zone/vcsky/", "/vcsky/")
+const replaceBR = "/vcbr/"
 
 // Configurable mode - show settings UI before play
 const configurableMode = params.get('configurable') === "1";
@@ -171,13 +171,9 @@ function updateAllTranslations() {
 
 // Function to update game data files based on language
 function updateGameDataForLanguage(lang) {
-    if (isLocal) {
-        data_content = "/index.data";
-        wasm_content = "/index.wasm";
-    } else {
-        data_content = WORKER + "/index.data";
-        wasm_content = WORKER + "/index.wasm";
-    }
+    // Use same-origin paths — Vercel proxies to Worker
+    data_content = "/index.data";
+    wasm_content = "/index.wasm";
 }
 
 // Initialize data files based on current language
