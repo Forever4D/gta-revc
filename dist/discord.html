@@ -16,101 +16,54 @@
         }
         .card {
             text-align: center;
-            padding: 48px;
+            padding: 40px;
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 20px;
             backdrop-filter: blur(40px);
+            max-width: 420px;
         }
         h1 {
-            font-size: 28px;
+            font-size: 26px;
             background: linear-gradient(135deg, #ff6b35, #ffaa5c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         p {
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 24px;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .link-box {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 16px;
+            word-break: break-all;
+        }
+        .link-box a {
+            color: #ff8c42;
+            text-decoration: none;
             font-size: 14px;
-        }
-        button {
-            background: linear-gradient(135deg, #ff6b35, #e85520);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            letter-spacing: 1px;
-        }
-        button:hover {
-            box-shadow: 0 8px 24px rgba(255,107,53,0.4);
         }
         .sub {
             color: rgba(255,255,255,0.3);
             font-size: 11px;
-            margin-top: 16px;
+            margin-top: 12px;
         }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Grand Theft Auto: Vice City</h1>
-        <p id="msg">Launching...</p>
-        <button id="btn" onclick="launch()" style="display:none">Launch Game</button>
+        <p>Copy the link below and open it in your browser to play.</p>
+        <div class="link-box">
+            <a href="https://gta-revc.vercel.app" target="_blank">gta-revc.vercel.app</a>
+        </div>
         <div class="sub">Compiled by Forever4D &bull; revcDOS</div>
     </div>
-
-    <script src="https://unpkg.com/@discord/embedded-app-sdk@1/dist/index.global.js"></script>
-    <script>
-    const GAME_URL = 'https://gta-revc.vercel.app';
-    const msg = document.getElementById('msg');
-    const btn = document.getElementById('btn');
-
-    async function launch() {
-        // Try multiple methods to open the game
-        const methods = [
-            () => { window.open(GAME_URL, '_blank', 'noopener,noreferrer'); },
-            () => { open(GAME_URL, '_blank'); },
-            () => { document.location = GAME_URL; },
-        ];
-        for (const fn of methods) {
-            try {
-                const w = fn();
-                if (w && !w.closed) return;
-            } catch(e) {}
-        }
-        // Last resort: message for manual navigation
-        msg.textContent = 'Please copy and open: gta-revc.vercel.app';
-    }
-
-    async function init() {
-        try {
-            const discordSdk = new DiscordSDK('', { disableConsoleLogOverride: true });
-            await discordSdk.ready();
-
-            // Use Discord SDK to open link externally
-            btn.onclick = async () => {
-                try {
-                    await discordSdk.commands.openExternalLink({ url: GAME_URL });
-                } catch(e) {
-                    launch();
-                }
-            };
-
-            msg.textContent = 'Click below to launch the game.';
-            btn.style.display = 'inline-block';
-        } catch(e) {
-            // No Discord SDK available - show manual instructions
-            msg.textContent = 'Click below to launch the game.';
-            btn.style.display = 'inline-block';
-            btn.onclick = launch;
-        }
-    }
-
-    init();
-    </script>
 </body>
 </html>
