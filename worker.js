@@ -6,6 +6,7 @@ const RELEASE = 'https://github.com/Forever4D/gta-revc/releases/download/v1.0';
 const CORS = { 'Access-Control-Allow-Origin': '*' };
 
 let assetIndex = null;
+let missingFiles = []; // Track missing files for debugging
 
 async function getIndex() {
   if (assetIndex) return assetIndex;
@@ -29,7 +30,12 @@ async function handleRequest(request) {
     if (!idx) return new Response('no-index', { status: 500, headers: CORS });
 
     const filePath = p.slice(1);
-    if (!(filePath in idx)) return new Response('no-key', { status: 404, headers: CORS });
+    if (!(filePath in idx)) {
+      missingFiles.push(filePath);
+      if (missingFiles.length > 50) missingFiles.shift();
+      // Return empty OK to prevent game crashes from 404
+      return new Response('', { status: 200, headers: { ...CORS, 'Content-Type': 'application/octet-stream', 'Content-Length': '0' } });
+    }
 
     const offset = idx[filePath];
 
@@ -86,6 +92,11 @@ async function handleRequest(request) {
     const resp = await fetch(`${RELEASE}/${p.slice(6)}`, { redirect: 'follow' });
     if (!resp.ok) return new Response('nf', { status: 404, headers: CORS });
     return new Response(resp.body, { headers: { ...CORS, 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'br', 'Cache-Control': 'public, max-age=86400' } });
+  }
+
+  // Debug: show missing files
+  if (p === '/debug-missing') {
+    return new Response(JSON.stringify(missingFiles), { headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 
   return new Response('nf', { status: 404, headers: CORS });
