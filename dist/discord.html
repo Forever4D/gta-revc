@@ -34,10 +34,11 @@
             margin-bottom: 24px;
             font-size: 14px;
         }
-        button {
+        a.launch {
+            display: inline-block;
             background: linear-gradient(135deg, #ff6b35, #e85520);
             color: white;
-            border: none;
+            text-decoration: none;
             padding: 14px 40px;
             font-size: 16px;
             font-weight: 600;
@@ -46,7 +47,7 @@
             letter-spacing: 1px;
             transition: transform 0.15s, box-shadow 0.15s;
         }
-        button:hover {
+        a.launch:hover {
             transform: scale(1.04);
             box-shadow: 0 8px 24px rgba(255,107,53,0.4);
         }
@@ -60,9 +61,20 @@
 <body>
     <div class="card">
         <h1>Grand Theft Auto: Vice City</h1>
-        <p>This game requires cross-origin isolation. Click below to open in a new window.</p>
-        <button onclick="window.open('https://gta-revc.vercel.app','_blank','noopener')">Launch Game</button>
+        <p>Click below to launch the game.</p>
+        <a class="launch" href="https://gta-revc.vercel.app" target="_blank" rel="noopener">Launch Game</a>
         <div class="sub">Compiled by Forever4D &bull; revcDOS</div>
     </div>
+    <script>
+    // Fallback: try window.open if link doesn't work
+    document.querySelector('a.launch').addEventListener('click', function(e) {
+        var w = window.open('https://gta-revc.vercel.app', '_blank', 'noopener');
+        if (!w || w.closed) {
+            // window.open blocked, let the link handle it
+            return;
+        }
+        e.preventDefault();
+    });
+    </script>
 </body>
 </html>
