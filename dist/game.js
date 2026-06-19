@@ -230,32 +230,36 @@ async function loadData() {
 async function startGame(e) {
     if (e) e.stopPropagation();
 
+    function splashMsg(msg) {
+        var el = document.getElementById('splash-status');
+        if (el) el.textContent = msg;
+    }
+
     try {
         document.querySelector('.start-container').style.display = 'none';
         document.querySelector('.disclaimer').style.display = 'none';
         document.querySelector('.developed-by').style.display = 'none';
 
-        const intro = document.querySelector('.intro');
-        const introContainer = document.querySelector('.intro-container');
         const loaderContainer = document.querySelector('.loader-container');
         if (document.querySelector('.click-to-play')) {
             document.querySelector('.click-to-play').style.display = 'none';
         }
-        loaderContainer.style.display = "flex";
-        statusElement.textContent = "Loading game data...";
-        spinnerElement.hidden = false;
+        if (loaderContainer) loaderContainer.style.display = "flex";
 
+        // Timeout fallback
+        var loadTimeout = setTimeout(function() {
+            splashMsg('Downloading... (slow connection)');
+        }, 10000);
+
+        splashMsg('Downloading game data...');
         const dataBuffer = await loadData();
-        spinnerElement.hidden = true;
+        clearTimeout(loadTimeout);
 
-        if (intro && introContainer) {
-            introContainer.style.display = 'none';
-        }
+        splashMsg('Starting engine...');
         loadGame(dataBuffer);
     } catch(err) {
         console.error("startGame error:", err);
-        statusElement.textContent = "Error: " + err.message;
-        spinnerElement.hidden = true;
+        splashMsg('Error: ' + (err.message || 'unknown'));
     }
 }
 
