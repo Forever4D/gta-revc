@@ -26,6 +26,7 @@ async function handleRequest(request) {
 
   // vcsky assets
   if (p.startsWith('/vcsky/')) {
+    try {
     const idx = await getIndex();
     if (!idx) return new Response('no-index', { status: 500, headers: CORS });
 
@@ -78,6 +79,9 @@ async function handleRequest(request) {
     const ct = { mp3: 'audio/mpeg', wav: 'audio/wav' }[ext] || 'application/octet-stream';
 
     return new Response(data, { headers: { ...CORS, 'Content-Type': ct, 'Content-Length': '' + fileSize, 'Cache-Control': 'public, max-age=86400' } });
+    } catch(e) {
+      return new Response('err:' + e.message, { status: 500, headers: CORS });
+    }
   }
 
   // Direct GitHub proxy for core files
