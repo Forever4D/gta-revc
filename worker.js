@@ -3,7 +3,7 @@ addEventListener('fetch', event => {
 });
 
 const RELEASE = 'https://github.com/Forever4D/gta-revc/releases/download/v1.0';
-const CORS = { 'Access-Control-Allow-Origin': '*' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin' };
 
 let assetIndex = null;
 let missingFiles = []; // Track missing files for debugging
